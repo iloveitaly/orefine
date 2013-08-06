@@ -3,17 +3,12 @@
 
 require './refine-ruby/lib/google-refine'
 
-csv_a_path = ARGV[0]
-csv_b_path = ARGV[1]
+class CSVUtil
+  class << self
+    def normalize_email_column(projects)
+      projects = [projects] if !projects.is_a?(Array)
 
-# TODO clear out all old CSV a & b or timestamp the new ones
-
-csv_a = Refine.new('csv_a', csv_a_path)
-csv_b = Refine.new('csv_b', csv_b_path)
-
-# == normalize the email column
-
-normalize_columns = %q{
+      operation = %q{
 [
   {
     "op": "core/column-rename",
@@ -31,10 +26,24 @@ normalize_columns = %q{
     "newColumnName": "email"
   }
 ]
-}
+      }
 
-csv_a.apply_operations(normalize_columns)
-csv_b.apply_operations(normalize_columns)
+      projects.each { |p| p.apply_operations(operation) }
+    end
+  end
+end
+
+csv_a_path = ARGV[0]
+csv_b_path = ARGV[1]
+
+# TODO clear out all old CSV a & b or timestamp the new ones
+
+csv_a = Refine.new('csv_a', csv_a_path)
+csv_b = Refine.new('csv_b', csv_b_path)
+
+all_csvs = [csv_a, csv_b]
+
+CSVUtil.normalize_email_column(all_csvs)
 
 email_strip = %q{
 [

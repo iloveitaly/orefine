@@ -2,6 +2,7 @@
 # https://github.com/OpenRefine/OpenRefine/blob/a7273625d7c33af70b6d16db5782c802186b3b99/main/webapp/modules/core/MOD-INF/controller.js
 
 require './refine-ruby/lib/google-refine'
+require 'slop'
 
 class CSVUtil
   class << self
@@ -46,11 +47,21 @@ class CSVUtil
       })
     end
 
+    def create_common_flag(project_a, project_b)
+      
+    end
+
     def perform_operation(projects, operation)
       projects = [projects] if !projects.is_a?(Array)
       projects.each { |p| p.apply_operations(operation) }
     end
   end
+end
+
+$opts = Slop.parse do
+  banner 'Usage: refine.rb [options] csv_a csv_b'
+
+  on 'output-columns=', 'Your name', as: Array
 end
 
 csv_a_path = ARGV[0]
@@ -84,9 +95,22 @@ puts csv_a.apply_operations(%q{
 ]
 })
 
-puts csv_a.export_rows(
+output_params = {}
+
+if !$opts['output-columns'].nil?
+  output_params["options"] ||= {}
+  output_params["options"]["columns"] ||= []
+
+  $opts['output-columns'].each do |c|
+    output_params["options"]["columns"] << { "name" => c }
+  end
+end
+
+puts $opts['output-columns'].inspect
+puts output_params.inspect
+
+puts csv_a.export_rows(output_params.merge({
   "format" => "csv",
-  "options" => { "columns" => [{"name" => "email_stripped"}] },
   "facets" => [
     {
       "invert" =>  false,
@@ -108,7 +132,7 @@ puts csv_a.export_rows(
       ]
     }
   ],
-)
+}))
 
 csv_b.delete_project
 

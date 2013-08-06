@@ -72,7 +72,7 @@ class CSVUtil
     "newColumnName": "exists",
     "columnInsertIndex": 3,
     "baseColumnName": "email_stripped",
-    "expression": "grel:cell.cross(\"#{project_b.project_name}\", \"email_stripped\").cells.length() > 0",
+    "expression": "grel:cell.cross(\\\"#{project_b.project_name}\\\", \\\"email_stripped\\\").cells.length() > 0",
     "onError": "set-to-blank"
   }
 ]
@@ -93,8 +93,8 @@ class CSVUtil
         "selection" =>  [
           {
             "v" =>  {
-              "v" =>  true,
-              "l" =>  "true"
+              "v" =>  flag,
+              "l" =>  flag,
             }
           }
         ]
@@ -144,7 +144,7 @@ end
 
 puts csv_a.export_rows(output_params.merge({
   "format" => "csv",
-  "facets" => [ CSVUtil.common_facet(false) ],
+  "facets" => [ CSVUtil.common_facet($opts.diff?) ],
 }))
 
 csv_b.delete_project

@@ -14,6 +14,11 @@ class CSVUtil
             .map(&:delete_project)
     end
 
+    def normalize_column_names(projects)
+      self.normalize_email_column_name(projects)
+      self.normalize_zip_column_name(projects)
+    end
+
     def normalize_email_column_name(projects)
       self.perform_operation(projects, %q{
 [
@@ -34,9 +39,31 @@ class CSVUtil
   },
   {
     "op": "core/column-rename",
+    "oldColumnName": "[email]",
+    "newColumnName": "email"
+  },
+  {
+    "op": "core/column-rename",
     "oldColumnName": "email_stripped",
     "newColumnName": "email"
   },  
+]
+      })
+    end
+
+    def normalize_zip_column_name(projects)
+      self.perform_operation(projects, %q{
+[
+  {
+    "op": "core/column-rename",
+    "oldColumnName": "Zip",
+    "newColumnName": "zip"
+  },
+  {
+    "op": "core/column-rename",
+    "oldColumnName": "[zip]",
+    "newColumnName": "zip"
+  }
 ]
       })
     end
@@ -79,6 +106,25 @@ class CSVUtil
       })
     end
 
+    def merge_field(project_a, project_b, field)
+      self.perform_operation(project_a, %Q{
+[
+  {
+    "op": "core/column-addition",
+    "engineConfig": {
+      "facets": [],
+      "mode": "record-based"
+    },
+    "newColumnName": "#{field}_merged",
+    "columnInsertIndex": 3,
+    "baseColumnName": "email_stripped",
+    "expression": "grel:cell.cross(\\\"#{project_b.project_name}\\\", \\\"email_stripped\\\").cells[\\\"#{field}\\\"].value[0]",
+    "onError": "set-to-blank"
+  }
+]
+            })
+    end
+
     def common_facet(flag = true)
       {
         "invert" =>  false,
@@ -112,7 +158,7 @@ $opts = Slop.parse do
   banner 'Usage: refine.rb csv_a csv_b [options]'
 
   on 'output-columns=', 'Your name', as: Array
-  on 'merge=', 'What column to merge in from csv_b'
+  on 'merge=', 'What column to merge in from csv_b', as: Array
   on 'diff', 'only output rows in csv_a whose email does not exist in csv_b'
 end
 
@@ -127,9 +173,15 @@ csv_b = Refine.new("project_name" => 'csv_b', "file_name" => csv_b_path)
 
 all_csvs = [csv_a, csv_b]
 
-CSVUtil.normalize_email_column_name(all_csvs)
+CSVUtil.normalize_column_names(all_csvs)
 CSVUtil.normalize_email_column_content(all_csvs)
 CSVUtil.create_common_flag(csv_a, csv_b)
+
+if !$opts['merge'].nil?
+  $opts['merge'].each do |merge_field|
+    CSVUtil.merge_field(csv_a, csv_b, merge_field)
+  end
+end
 
 output_params = {}
 
@@ -144,10 +196,9 @@ end
 
 puts csv_a.export_rows(output_params.merge({
   "format" => "csv",
-  "facets" => [ CSVUtil.common_facet($opts.diff?) ],
+  "facets" => [ CSVUtil.common_facet(!$opts.diff?) ],
 }))
 
-csv_b.delete_project
+`open "http://127.0.0.1:3333/project?project=#{csv_a.project_id}"`
 
 # File.open('merged', 'w') { |f| f.write(csv_a.export_rows('csv')) }
-# csv_b.delete_project

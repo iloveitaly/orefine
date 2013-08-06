@@ -5,10 +5,8 @@ require './refine-ruby/lib/google-refine'
 
 class CSVUtil
   class << self
-    def normalize_email_column(projects)
-      projects = [projects] if !projects.is_a?(Array)
-
-      operation = %q{
+    def normalize_email_column_name(projects)
+      self.perform_operation(projects, %q{
 [
   {
     "op": "core/column-rename",
@@ -26,8 +24,30 @@ class CSVUtil
     "newColumnName": "email"
   }
 ]
-      }
+      })
+    end
 
+    def normalize_email_column_content(projects)
+      self.perform_operation(projects, %q{
+[
+  {
+    "op": "core/column-addition",
+    "engineConfig": {
+      "facets": [],
+      "mode": "record-based"
+    },
+    "newColumnName": "email_stripped",
+    "columnInsertIndex": 3,
+    "baseColumnName": "email",
+    "expression": "grel:strip(value.toLowercase())",
+    "onError": "set-to-blank"
+  }
+]
+      })
+    end
+
+    def perform_operation(projects, operation)
+      projects = [projects] if !projects.is_a?(Array)
       projects.each { |p| p.apply_operations(operation) }
     end
   end
@@ -43,28 +63,8 @@ csv_b = Refine.new('csv_b', csv_b_path)
 
 all_csvs = [csv_a, csv_b]
 
-CSVUtil.normalize_email_column(all_csvs)
-
-email_strip = %q{
-[
-  {
-    "op": "core/column-addition",
-    "engineConfig": {
-      "facets": [],
-      "mode": "record-based"
-    },
-    "newColumnName": "email_stripped",
-    "columnInsertIndex": 3,
-    "baseColumnName": "email",
-    "expression": "grel:strip(value.toLowercase())",
-    "onError": "set-to-blank"
-  }
-]
-}
-
-# strip & lowercase all emails
-csv_a.apply_operations(email_strip)
-csv_b.apply_operations(email_strip)
+CSVUtil.normalize_email_column_name(all_csvs)
+CSVUtil.normalize_email_column_content(all_csvs)
 
 # == create a bool column and export all rows that aren't in the second csv
 puts csv_a.apply_operations(%q{

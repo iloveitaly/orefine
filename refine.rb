@@ -88,6 +88,11 @@ class CSVUtil
     end
 
     def create_common_flag(project_a, project_b)
+      if project_a.get_columns_info.map { |c| c["name"] }.include? 'exists'
+        STDERR.puts "'exists' column already exists in csv_a, deleting"
+        self.delete_column(project_a, "exists")
+      end
+
       self.perform_operation(project_a, %Q{
 [
   {
@@ -97,7 +102,7 @@ class CSVUtil
       "mode": "record-based"
     },
     "newColumnName": "exists",
-    "columnInsertIndex": 3,
+    "columnInsertIndex": 0,
     "baseColumnName": "email_stripped",
     "expression": "grel:cell.cross(\\\"#{project_b.project_name}\\\", \\\"email_stripped\\\").cells.length() > 0",
     "onError": "set-to-blank"
@@ -150,6 +155,7 @@ class CSVUtil
         "selection" =>  [
           {
             "v" =>  {
+              # string vs boolean matters here... be careful
               "v" =>  flag,
               "l" =>  flag,
             }
@@ -172,6 +178,7 @@ $opts = Slop.parse do
   on 'delete-columns=', 'What columns to delete from the output', as: Array
   on 'merge=', 'What column to merge in from csv_b', as: Array
   on 'diff', 'only output rows in csv_a whose email does not exist in csv_b'
+  on 'common'
   on 'open', 'open the document in a web browser'
 end
 
@@ -197,7 +204,7 @@ if !$opts['merge'].nil?
   end
 end
 
-output_params = {}
+output_params = { "format" => "csv" }
 
 if !$opts['output-columns'].nil?
   output_params["options"] ||= {}
@@ -210,17 +217,17 @@ end
 
 if !$opts['delete-columns'].nil?
   $opts['delete-columns'].each do |column_name|
-    puts "Removing #{column_name}"
     CSVUtil.delete_column(csv_a, column_name)
   end
 end
 
-if !csv_b.nil?
-  output_params["facets"] = [ CSVUtil.common_facet(!$opts.diff?) ]
+if !csv_b.nil? && ($opts.diff? || $opts.common?)
+  flag = true
+  flag = false if $opts.diff?
+  
+  output_params["facets"] = [ CSVUtil.common_facet(flag) ]
 end
 
-puts csv_a.export_rows(output_params.merge({
-  "format" => "csv",
-}))
+puts csv_a.export_rows(output_params)
 
 `open "http://127.0.0.1:3333/project?project=#{csv_a.project_id}"` if $opts.open?

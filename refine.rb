@@ -169,13 +169,14 @@ csv_b_path = ARGV[1]
 
 CSVUtil.clear_all_csvs
 csv_a = Refine.new("project_name" => 'csv_a', "file_name" => csv_a_path)
-csv_b = Refine.new("project_name" => 'csv_b', "file_name" => csv_b_path)
+csv_b = Refine.new("project_name" => 'csv_b', "file_name" => csv_b_path) if !csv_b_path.empty? && File.exists?(csv_b_path)
 
-all_csvs = [csv_a, csv_b]
+all_csvs = [csv_a]
+all_csvs << csv_b if !csv_b.nil?
 
 CSVUtil.normalize_column_names(all_csvs)
 CSVUtil.normalize_email_column_content(all_csvs)
-CSVUtil.create_common_flag(csv_a, csv_b)
+CSVUtil.create_common_flag(csv_a, csv_b) if !csv_b.nil?
 
 if !$opts['merge'].nil?
   $opts['merge'].each do |merge_field|
@@ -194,9 +195,12 @@ if !$opts['output-columns'].nil?
   end
 end
 
+if !csv_b.nil?
+  output_params["facets"] = [ CSVUtil.common_facet(!$opts.diff?) ]
+end
+
 puts csv_a.export_rows(output_params.merge({
   "format" => "csv",
-  "facets" => [ CSVUtil.common_facet(!$opts.diff?) ],
 }))
 
 `open "http://127.0.0.1:3333/project?project=#{csv_a.project_id}"`

@@ -122,7 +122,18 @@ class CSVUtil
     "onError": "set-to-blank"
   }
 ]
-            })
+      })
+    end
+
+    def delete_column(project_a, field)
+      self.perform_operation(project_a, %Q{
+[
+  {
+    "op": "core/column-removal",
+    "columnName": "#{field}"
+  }
+]
+      })
     end
 
     def common_facet(flag = true)
@@ -158,8 +169,10 @@ $opts = Slop.parse do
   banner 'Usage: refine.rb csv_a csv_b [options]'
 
   on 'output-columns=', 'Your name', as: Array
+  on 'delete-columns=', 'What columns to delete from the output', as: Array
   on 'merge=', 'What column to merge in from csv_b', as: Array
   on 'diff', 'only output rows in csv_a whose email does not exist in csv_b'
+  on 'open', 'open the document in a web browser'
 end
 
 csv_a_path = ARGV[0]
@@ -195,6 +208,13 @@ if !$opts['output-columns'].nil?
   end
 end
 
+if !$opts['delete-columns'].nil?
+  $opts['delete-columns'].each do |column_name|
+    puts "Removing #{column_name}"
+    CSVUtil.delete_column(csv_a, column_name)
+  end
+end
+
 if !csv_b.nil?
   output_params["facets"] = [ CSVUtil.common_facet(!$opts.diff?) ]
 end
@@ -203,6 +223,4 @@ puts csv_a.export_rows(output_params.merge({
   "format" => "csv",
 }))
 
-`open "http://127.0.0.1:3333/project?project=#{csv_a.project_id}"`
-
-# File.open('merged', 'w') { |f| f.write(csv_a.export_rows('csv')) }
+`open "http://127.0.0.1:3333/project?project=#{csv_a.project_id}"` if $opts.open?

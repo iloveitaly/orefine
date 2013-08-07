@@ -130,12 +130,31 @@ class CSVUtil
       })
     end
 
-    def delete_column(project_a, field)
-      self.perform_operation(project_a, %Q{
+    def delete_column(csv, field)
+      self.perform_operation(csv, %Q{
 [
   {
     "op": "core/column-removal",
     "columnName": "#{field}"
+  }
+]
+      })
+    end
+
+    def add_column(csv, field, value)
+      self.perform_operation(csv, %Q{
+[
+  {
+    "op": "core/column-addition",
+    "engineConfig": {
+      "facets": [],
+      "mode": "record-based"
+    },
+    "newColumnName": "#{field}",
+    "columnInsertIndex": 0,
+    "baseColumnName": "email_stripped",
+    "expression": "grel:\\\"#{value}\\\"",
+    "onError": "set-to-blank"
   }
 ]
       })
@@ -177,9 +196,13 @@ $opts = Slop.parse do
   on 'output-columns=', 'Your name', as: Array
   on 'delete-columns=', 'What columns to delete from the output', as: Array
   on 'merge=', 'What column to merge in from csv_b', as: Array
+  on 'add-static-column=', 'Add a column with a static value (input: key, value)', as: Array
+
   on 'diff', 'only output rows in csv_a whose email does not exist in csv_b'
-  on 'common'
+  on 'common', 'only output rows common to both csvs'
+
   on 'open', 'open the document in a web browser'
+  on 'stdout', 'write the resulting csv to stdout'
 end
 
 csv_a_path = ARGV[0]
@@ -204,6 +227,11 @@ if !$opts['merge'].nil?
   end
 end
 
+if !$opts['add-static-column'].nil?
+  puts $opts['add-static-column']
+  CSVUtil.add_column(csv_a, $opts['add-static-column'].first, $opts['add-static-column'].last)
+end
+
 output_params = { "format" => "csv" }
 
 if !$opts['output-columns'].nil?
@@ -224,7 +252,7 @@ end
 if !csv_b.nil? && ($opts.diff? || $opts.common?)
   flag = true
   flag = false if $opts.diff?
-  
+
   output_params["facets"] = [ CSVUtil.common_facet(flag) ]
 end
 

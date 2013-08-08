@@ -1,5 +1,7 @@
 # https://github.com/maxogden/refine-python/wiki/Refine-API
 # https://github.com/OpenRefine/OpenRefine/blob/a7273625d7c33af70b6d16db5782c802186b3b99/main/webapp/modules/core/MOD-INF/controller.js
+# http://blog.ouseful.info/2011/05/06/merging-datesets-with-common-columns-in-google-refine/
+# https://github.com/OpenRefine/OpenRefine/wiki/GREL-Other-Functions
 
 require './refine-ruby/lib/google-refine'
 require 'slop'
@@ -130,6 +132,10 @@ class CSVUtil
       })
     end
 
+    def merge_common_field(csv_a, csv_b, common_field)
+      
+    end
+
     def delete_column(csv, field)
       self.perform_operation(csv, %Q{
 [
@@ -197,6 +203,7 @@ $opts = Slop.parse do
   on 'delete-columns=', 'What columns to delete from the output', as: Array
   on 'merge=', 'What column to merge in from csv_b', as: Array
   on 'add-static-column=', 'Add a column with a static value (input: key, value)', as: Array
+  on 'merge-common=', 'Merge values from common columns with a comma'
 
   on 'diff', 'only output rows in csv_a whose email does not exist in csv_b'
   on 'common', 'only output rows common to both csvs'
@@ -224,6 +231,12 @@ CSVUtil.create_common_flag(csv_a, csv_b) if !csv_b.nil?
 if !$opts['merge'].nil?
   $opts['merge'].each do |merge_field|
     CSVUtil.merge_field(csv_a, csv_b, merge_field)
+  end
+end
+
+if !$opts['merge-common'].nil?
+  $opts['merge-common'].each do |common_merge|
+    CSVUtil.merge_common_field(csv_a, csv_b, common_merge)
   end
 end
 

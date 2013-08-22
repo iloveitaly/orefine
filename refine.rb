@@ -199,7 +199,7 @@ end
 $opts = Slop.parse do
   banner 'Usage: refine.rb csv_a csv_b [options]'
 
-  on 'output-columns=', 'Your name', as: Array
+  on 'output-columns=', 'List of columns you want in the resulting csv', as: Array
   on 'delete-columns=', 'What columns to delete from the output', as: Array
   on 'merge=', 'What column to merge in from csv_b', as: Array
   on 'add-static-column=', 'Add a column with a static value (input: key, value)', as: Array
@@ -210,6 +210,11 @@ $opts = Slop.parse do
 
   on 'open', 'open the document in a web browser'
   on 'stdout', 'write the resulting csv to stdout'
+end
+
+if ARGV.empty?
+  puts $opts.help
+  Kernel.exit!
 end
 
 csv_a_path = ARGV[0]

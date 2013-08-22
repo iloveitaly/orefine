@@ -269,6 +269,6 @@ if !csv_b.nil? && ($opts.diff? || $opts.common?)
   output_params["facets"] = [ CSVUtil.common_facet(flag) ]
 end
 
-puts csv_a.export_rows(output_params)
+puts csv_a.export_rows(output_params) if $opts.stdout?
 
 `open "http://127.0.0.1:3333/project?project=#{csv_a.project_id}"` if $opts.open?

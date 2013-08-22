@@ -80,7 +80,7 @@ class CSVUtil
       "mode": "record-based"
     },
     "newColumnName": "email_stripped",
-    "columnInsertIndex": 3,
+    "columnInsertIndex": 0,
     "baseColumnName": "email",
     "expression": "grel:strip(value.toLowercase())",
     "onError": "set-to-blank"
@@ -123,7 +123,7 @@ class CSVUtil
       "mode": "record-based"
     },
     "newColumnName": "#{field}_merged",
-    "columnInsertIndex": 3,
+    "columnInsertIndex": 0,
     "baseColumnName": "email_stripped",
     "expression": "grel:cell.cross(\\\"#{project_b.project_name}\\\", \\\"email_stripped\\\").cells[\\\"#{field}\\\"].value[0]",
     "onError": "set-to-blank"
@@ -196,6 +196,11 @@ class CSVUtil
   end
 end
 
+if ARGV.empty?
+  puts $opts.help
+  exit
+end
+
 $opts = Slop.parse do
   banner 'Usage: refine.rb csv_a csv_b [options]'
 
@@ -212,11 +217,6 @@ $opts = Slop.parse do
   on 'stdout', 'write the resulting csv to stdout'
 end
 
-if ARGV.empty?
-  puts $opts.help
-  Kernel.exit!
-end
-
 csv_a_path = ARGV[0]
 csv_b_path = ARGV[1]
 
@@ -224,7 +224,7 @@ csv_b_path = ARGV[1]
 
 CSVUtil.clear_all_csvs
 csv_a = Refine.new("project_name" => 'csv_a', "file_name" => csv_a_path)
-csv_b = Refine.new("project_name" => 'csv_b', "file_name" => csv_b_path) if !csv_b_path.empty? && File.exists?(csv_b_path)
+csv_b = Refine.new("project_name" => 'csv_b', "file_name" => csv_b_path) if !csv_b_path.nil? && File.exists?(csv_b_path)
 
 all_csvs = [csv_a]
 all_csvs << csv_b if !csv_b.nil?
@@ -246,7 +246,6 @@ if !$opts['merge-common'].nil?
 end
 
 if !$opts['add-static-column'].nil?
-  puts $opts['add-static-column']
   CSVUtil.add_column(csv_a, $opts['add-static-column'].first, $opts['add-static-column'].last)
 end
 

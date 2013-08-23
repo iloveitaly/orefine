@@ -19,6 +19,7 @@ class CSVUtil
     def normalize_column_names(projects)
       self.normalize_email_column_name(projects)
       self.normalize_zip_column_name(projects)
+      self.normalize_full_name_column_name(projects)
     end
 
     def normalize_email_column_name(projects)
@@ -70,6 +71,23 @@ class CSVUtil
       })
     end
 
+    def normalize_full_name_column_name(projects)
+      self.perform_operation(projects, %q{
+[
+  {
+    "op": "core/column-rename",
+    "oldColumnName": "Name",
+    "newColumnName": "full_name"
+  },
+  {
+    "op": "core/column-rename",
+    "oldColumnName": "Full Name",
+    "newColumnName": "full_name"
+  }
+]
+      })
+    end
+
     def normalize_email_column_content(projects)
       self.perform_operation(projects, %q{
 [
@@ -84,6 +102,28 @@ class CSVUtil
     "baseColumnName": "email",
     "expression": "grel:strip(value.toLowercase())",
     "onError": "set-to-blank"
+  }
+]
+      })
+    end
+
+    def split_full_name(projects)
+      self.perform_operation(projects, %q{
+[
+  {
+    "op": "core/column-split",
+    "description": "Split column Name by separator",
+    "engineConfig": {
+      "facets": [],
+      "mode": "row-based"
+    },
+    "columnName": "full_name",
+    "guessCellType": false,
+    "removeOriginalColumn": false,
+    "mode": "separator",
+    "separator": "(?<=[a-z]) ",
+    "regex": true,
+    "maxColumns": 2
   }
 ]
       })
@@ -212,6 +252,7 @@ $opts = Slop.parse do
 
   on 'diff', 'only output rows in csv_a whose email does not exist in csv_b'
   on 'common', 'only output rows common to both csvs'
+  on 'split-full-name', 'split a full name field into first and last'
 
   on 'open', 'open the document in a web browser'
   on 'stdout', 'write the resulting csv to stdout'
@@ -232,6 +273,8 @@ all_csvs << csv_b if !csv_b.nil?
 CSVUtil.normalize_column_names(all_csvs)
 CSVUtil.normalize_email_column_content(all_csvs)
 CSVUtil.create_common_flag(csv_a, csv_b) if !csv_b.nil?
+
+CSVUtil.split_full_name(csv_a) if !$opts['split-full-name'].nil?
 
 if !$opts['merge'].nil?
   $opts['merge'].each do |merge_field|

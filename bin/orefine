@@ -1,5 +1,91 @@
 #!/usr/bin/env ruby
 
+require 'orefine'
 require 'slop'
 
-puts "hello"
+include Orefine
+
+$opts = Slop.parse do
+  banner 'Usage: refine.rb csv_a csv_b [options]'
+
+  on 'output-columns=', 'List of columns you want in the resulting csv', as: Array
+  on 'delete-columns=', 'What columns to delete from the output', as: Array
+  on 'merge=', 'What column to merge in from csv_b', as: Array
+  on 'add-static-column=', 'Add a column with a static value (input: key, value)', as: Array
+  on 'merge-common=', 'Merge values from common columns with a comma'
+
+  on 'diff', 'only output rows in csv_a whose email does not exist in csv_b'
+  on 'common', 'only output rows common to both csvs'
+  on 'split-full-name', 'split a full name field into first and last'
+
+  on 'open', 'open the document in a web browser'
+  on 'stdout', 'write the resulting csv to stdout'
+end
+
+if ARGV.empty?
+  puts $opts.help
+  exit
+end
+
+
+csv_a_path = ARGV[0]
+csv_b_path = ARGV[1]
+
+# TODO clear out all old CSV a & b or timestamp the new ones
+
+CSVUtil.clear_all_csvs
+csv_a = Refine.new("project_name" => 'csv_a', "file_name" => csv_a_path)
+csv_b = Refine.new("project_name" => 'csv_b', "file_name" => csv_b_path) if !csv_b_path.nil? && File.exists?(csv_b_path)
+
+all_csvs = [csv_a]
+all_csvs << csv_b if !csv_b.nil?
+
+CSVUtil.normalize_column_names(all_csvs)
+CSVUtil.normalize_email_column_content(all_csvs)
+CSVUtil.create_common_flag(csv_a, csv_b) if !csv_b.nil?
+
+CSVUtil.split_full_name(csv_a) if !$opts['split-full-name'].nil?
+
+if !$opts['merge'].nil?
+  $opts['merge'].each do |merge_field|
+    CSVUtil.merge_field(csv_a, csv_b, merge_field)
+  end
+end
+
+if !$opts['merge-common'].nil?
+  $opts['merge-common'].each do |common_merge|
+    CSVUtil.merge_common_field(csv_a, csv_b, common_merge)
+  end
+end
+
+if !$opts['add-static-column'].nil?
+  CSVUtil.add_column(csv_a, $opts['add-static-column'].first, $opts['add-static-column'].last)
+end
+
+output_params = { "format" => "csv" }
+
+if !$opts['output-columns'].nil?
+  output_params["options"] ||= {}
+  output_params["options"]["columns"] ||= []
+
+  $opts['output-columns'].each do |c|
+    output_params["options"]["columns"] << { "name" => c }
+  end
+end
+
+if !$opts['delete-columns'].nil?
+  $opts['delete-columns'].each do |column_name|
+    CSVUtil.delete_column(csv_a, column_name)
+  end
+end
+
+if !csv_b.nil? && ($opts.diff? || $opts.common?)
+  flag = true
+  flag = false if $opts.diff?
+
+  output_params["facets"] = [ CSVUtil.common_facet(flag) ]
+end
+
+puts csv_a.export_rows(output_params) if $opts.stdout?
+
+`open "http://127.0.0.1:3333/project?project=#{csv_a.project_id}"` if $opts.open?

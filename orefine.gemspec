@@ -8,9 +8,9 @@ Gem::Specification.new do |s|
   s.version       = Orefine::VERSION
   s.authors       = ["Michael Bianco"]
   s.email         = ["info@cliffsidedev.com"]
-  s.description   = %q{TODO: Write a gem description}
-  s.summary       = %q{TODO: Write a gem summary}
-  s.homepage      = ""
+  s.description   = %q{Easily modify CSVs from the command line using Open Refine}
+  s.summary       = %q{Easily modify CSVs from the command line using Open Refine}
+  s.homepage      = "http://github.com/iloveitaly/orefine"
   s.license       = "MIT"
 
   s.files         = `git ls-files`.split($/)
@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_dependency 'google-refine', '~> 0.1.1'
+  s.add_dependency 'slop', '~> 3.4.6'
 
   s.add_development_dependency "bundler", "~> 1.3"
   s.add_development_dependency "rake"

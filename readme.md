@@ -11,3 +11,11 @@ ruby refine.rb import_list.csv external_list_with_zip_and_state_data.csv --merge
 # tag a list
 ruby refine.rb import_list.csv --add-static-column=source,AUG-2013-POSTCARD-IMPORT --output-columns=email_stripped,source --stdout > ~/Desktop/list_import.csv
 ```
+
+## Contributing
+
+1. Fork it
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Add some feature'`)
+4. Push to the branch (`git push origin my-new-feature`)
+5. Create new Pull Request

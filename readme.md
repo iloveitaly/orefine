@@ -6,10 +6,10 @@ You'll need [OpenRefine](https://github.com/OpenRefine/OpenRefine) installed & r
 ## Examples
 ```
 # output a list of stripped emails from a CSV
-orefine a_list_of_emails_and_other_columns.csv --output-columns=email_stripped
+orefine a_list_of_emails_and_other_columns.csv --output-columns=email_stripped --stdout
 
 # list of emails common to both csvs
-orefine full_list.csv other_set_to_intersect_with.csv --common --output-columns=email
+orefine full_list.csv other_set_to_intersect_with.csv --common --output-columns=email --stdout
 
 # merge data from another list & tag
 orefine import_list.csv external_list_with_zip_and_state_data.csv --merge=zip,State --add-static-column=source,"LIST-TAG-DATA" --open
